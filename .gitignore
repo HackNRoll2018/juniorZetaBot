@@ -5,3 +5,4 @@ Procfile
 .idea/workspace.xml
 .idea/modules.xml
 .idea/juniorZetaBot.iml
+*.sqlite
