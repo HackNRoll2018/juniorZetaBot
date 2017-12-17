@@ -1,0 +1,1 @@
+worker: python junior_zeta_bot.py
