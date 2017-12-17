@@ -6,10 +6,29 @@ import time
 import urllib
 from dbhelper import DBHelper
 
+LIST_HEADER = "Todo list:\n"
+
+COMMAND_CHARACTER = "/"
+
+START_COMMAND = "/start"
+
+DONE_COMMAND = "/done"
+
+SHOW_COMMAND = "/show"
+
+MESSAGE_DELETE_ITEM = "Select an item to delete"
+
+MESSAGE_EMPTY_LIST = "There is nothing on your todo list."
+
+MESSAGE_STARTUP = "*Welcome to your personal To Do list.*\n" \
+                  + "Send any text to me and I'll store it as an item.\n"\
+                  + "Send /done to remove items \n" + "Send /show to show all items"
+
+TOKEN = "487892536:AAETCkb0f8Druow7YzMV_lo9WESiWUUNAiU"
+
+URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 db = DBHelper()
-TOKEN = "487892536:AAETCkb0f8Druow7YzMV_lo9WESiWUUNAiU"
-URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 db.setup()
 
 
@@ -18,6 +37,7 @@ def get_url(url):
     response = requests.get(url)
     content = response.content.decode("utf8")
     return content
+
 
 # gets the string response and parses it into a Python dictionary
 def get_json_from_url(url):
@@ -62,30 +82,51 @@ def handle_updates(updates):
         text = update["message"]["text"]
         chat = update["message"]["chat"]["id"]
         items = db.get_items()
-        if text == "/done":
-            keyboard = build_keyboard(items)
-            send_message("Select an item to delete", chat, keyboard)
-        elif text == "/start":
-            send_message(
-                "Welcome to your personal To Do list. Send any text to me and I'll store it as an item. Send /done to remove items",
-                chat)
-        elif text.startswith("/"):
-            continue
-        elif text in items:
-            db.delete_item(text)
-            items = db.get_items()
-            keyboard = build_keyboard(items)
-            send_message("Select an item to delete", chat, keyboard)
-        else:
-            db.add_item(text)
-            items = db.get_items()
-            message = "\n".join(items)
-            send_message(message, chat)
+        process_text(chat, text, items)
+
+
+def process_text(chat, text, items):
+    if text == DONE_COMMAND:
+        show_items_to_delete(chat, items)
+    elif text == START_COMMAND:
+        send_message(MESSAGE_STARTUP, chat)
+    elif text == SHOW_COMMAND:
+        show_full_list(chat)
+    elif text.startswith(COMMAND_CHARACTER):
+        pass
+    elif text in items:
+        db.delete_item(text)
+        items = db.get_items()
+        show_items_to_delete(chat, items)
+    else:
+        db.add_item(text)
+        show_full_list(chat)
+
+
+def show_full_list(chat):
+    items = db.get_items()
+    if not items:
+        send_message(MESSAGE_EMPTY_LIST, chat)
+    else:
+        message = LIST_HEADER + "\n".join(items)
+        send_message(message, chat)
+
+
+def show_items_to_delete(chat, items):
+    if items:
+        keyboard = build_keyboard(items)
+        send_message(MESSAGE_DELETE_ITEM, chat, keyboard)
+    else:
+        send_message(MESSAGE_EMPTY_LIST, chat, remove_keyboard())
 
 
 def build_keyboard(items):
     keyboard = [[item] for item in items]
-    reply_markup = {"keyboard":keyboard, "one_time_keyboard": True}
+    reply_markup = {"keyboard": keyboard, "one_time_keyboard": True}
+    return json.dumps(reply_markup)
+
+def remove_keyboard():
+    reply_markup = {"remove_keyboard": True}
     return json.dumps(reply_markup)
 
 
@@ -99,6 +140,7 @@ def main():
         # put a small delay between requests (this is kinder to Telegram's servers and better for our own network
         # resources)
         time.sleep(0.3)
+
 
 if __name__ == '__main__':
     main()
