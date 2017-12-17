@@ -1,6 +1,0 @@
-Procfile
-__init__
-__pycache__
-*.pyc
-*.sqlite
-.idea
