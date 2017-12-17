@@ -21,8 +21,8 @@ MESSAGE_DELETE_ITEM = "Select an item to delete"
 MESSAGE_EMPTY_LIST = "There is nothing on your todo list."
 
 MESSAGE_STARTUP = "*Welcome to your personal To Do list.*\n" \
-                  + "Send any text to me and I'll store it as an item.\n"\
-                  + "Send /done to remove items \n" + "Send /show to show all items"
+                  + "- Send any text to me and I'll store it as an item.\n"\
+                  + "- Send /done to remove items \n" + "- Send /show to show all items"
 
 TOKEN = "487892536:AAETCkb0f8Druow7YzMV_lo9WESiWUUNAiU"
 
