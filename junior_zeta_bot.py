@@ -79,10 +79,14 @@ def send_message(text, chat_id, reply_markup=None):
 
 def handle_updates(updates):
     for update in updates["result"]:
-        text = update["message"]["text"]
         chat = update["message"]["chat"]["id"]
-        items = db.get_items()
-        process_text(chat, text, items)
+        try:
+            text = update["message"]["text"]
+            items = db.get_items()
+            process_text(chat, text, items)
+        # if user sends any kind of media instead of text
+        except KeyError:
+            send_message("Media is saved.", chat)
 
 
 def process_text(chat, text, items):
@@ -124,6 +128,7 @@ def build_keyboard(items):
     keyboard = [[item] for item in items]
     reply_markup = {"keyboard": keyboard, "one_time_keyboard": True}
     return json.dumps(reply_markup)
+
 
 def remove_keyboard():
     reply_markup = {"remove_keyboard": True}
