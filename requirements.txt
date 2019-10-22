@@ -120,7 +120,7 @@ QtAwesome==0.4.4
 qtconsole==4.3.1
 QtPy==1.3.1
 requests==2.20.0
-rope==0.10.5
+rope==0.11.0
 simplegeneric==0.8.1
 singledispatch==3.4.0.3
 six==1.11.0
