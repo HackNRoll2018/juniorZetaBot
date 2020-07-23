@@ -19,7 +19,7 @@ class DBHelper:
 
     def add_log(self, timestamp, description):
         statement = f"INSERT INTO {self.table} (timestamp, description) VALUES (?, ?)"
-        args = (timestamp, description,)
+        args = (str(timestamp), description,)
         self.conn.execute(statement, args)
         self.conn.commit()
 

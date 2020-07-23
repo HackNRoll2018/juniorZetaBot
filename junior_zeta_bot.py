@@ -2,11 +2,11 @@
 
 import json
 import time
+from datetime import datetime
 import urllib.parse
 
 import requests
 from selenium import webdriver
-from selenium.common.exceptions import InvalidArgumentException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -162,7 +162,8 @@ def handle_updates(updates):
                 has_watered, count = water_plant(url)
                 reply = SUCCESS_RESPONSE if has_watered else FAIL_RESPONSE.format(count + 1)
                 send_message(reply, chat_id)
-            except Exception:
+            except Exception as err:
+                db.add_log(datetime.now(), str(err))
                 send_message(ERROR_RESPONSE, chat_id)
         elif text == SHOW_LOG_COMMAND:
             send_latest_log(chat_id)
