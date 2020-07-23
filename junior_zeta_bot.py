@@ -27,8 +27,6 @@ WATERING_CAN_ID = 'div.f-kettle-body'
 
 DOWNLOAD_IMG_ID = 'div.download-img'
 
-LIMIT = 5
-
 CONFUSED_RESPONSE = "I am confused 😕"
 
 SUCCESS_RESPONSE = "Successfully watered your plant today 🌱"
@@ -36,6 +34,8 @@ SUCCESS_RESPONSE = "Successfully watered your plant today 🌱"
 FAIL_RESPONSE = "I was not able to water your plant [[{}]] 😓 Please try again"
 
 ERROR_RESPONSE = "Oops something went wrong... Please try again"
+
+LIMIT = 5
 
 
 def init():
