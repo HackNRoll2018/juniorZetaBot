@@ -1,20 +1,20 @@
 # created using: https://www.codementor.io/garethdwyer/building-a-telegram-bot-using-python-part-1-goi5fncay
 
 import json
-import requests
-from datetime import datetime
 import time
 import urllib.parse
+
+import requests
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
-from dbhelper import DBHelper
-# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
+
+from dbhelper import DBHelper
 
 # Telegram bot specific constants
 SHOW_LOG_COMMAND = "/log"
-
-CHROME_DRIVER_PATH = None
 
 TELEGRAM_API_URL = "https://api.telegram.org/bot{}/"
 
@@ -41,9 +41,8 @@ ERROR_RESPONSE = "Oops something went wrong... Please try again"
 def init():
     with open('config.json') as config_file:
         config = json.load(config_file)
-    global TELEGRAM_API_URL, CHROME_DRIVER_PATH
+    global TELEGRAM_API_URL
     TELEGRAM_API_URL = TELEGRAM_API_URL.format(config['token'])
-    # CHROME_DRIVER_PATH = ChromeDriverManager().install()
     db.setup()
 
 
@@ -116,20 +115,18 @@ def water_plant(url):
     count = 0
     while count < LIMIT:
         browser = webdriver.Chrome(options=chrome_options)
-        # browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
         browser.get(url)
-        time.sleep(3)
-        try:
-            watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
-            watering_can.click()
-            time.sleep(6)
-            # To check if watering was successful, will throw NoSuchElementException is not found
-            browser.find_element_by_css_selector(DOWNLOAD_IMG_ID)
-            count += 1
-            browser.quit()
-        except NoSuchElementException as err:
-            db.add_log(str(datetime.now()), err.msg)
+        present = WebDriverWait(browser, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
+        if not present:
             return False, count
+        watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
+        watering_can.click()
+        # To check if watering was successful
+        present = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, DOWNLOAD_IMG_ID)))
+        if not present:
+            return False, count
+        count += 1
+        browser.quit()
     return True, count
 
 
