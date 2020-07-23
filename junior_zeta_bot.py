@@ -43,7 +43,7 @@ def init():
         config = json.load(config_file)
     global TELEGRAM_API_URL, CHROME_DRIVER_PATH
     TELEGRAM_API_URL = TELEGRAM_API_URL.format(config['token'])
-    CHROME_DRIVER_PATH = ChromeDriverManager().install()
+    # CHROME_DRIVER_PATH = ChromeDriverManager().install()
     db.setup()
 
 
@@ -115,7 +115,8 @@ def water_plant(url):
     chrome_options.add_argument("--headless")
     count = 0
     while count < LIMIT:
-        browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
+        browser = webdriver.Chrome(options=chrome_options)
+        # browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
         browser.get(url)
         time.sleep(3)
         try:
