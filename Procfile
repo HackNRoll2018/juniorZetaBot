@@ -1,1 +1,1 @@
-web: python3 junior_zeta_bot.py
+web: python junior_zeta_bot.py
