@@ -2,56 +2,84 @@
 
 import json
 import requests
+from datetime import datetime
 import time
-import urllib
+import urllib.parse
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from dbhelper import DBHelper
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 
-LIST_HEADER = "Todo list:\n"
+# Telegram bot specific constants
+SHOW_LOG_COMMAND = "/log"
 
-COMMAND_CHARACTER = "/"
+CHROME_DRIVER_PATH = None
 
-START_COMMAND = "/start"
+TELEGRAM_API_URL = "https://api.telegram.org/bot{}/"
 
-DONE_COMMAND = "/done"
-
-SHOW_COMMAND = "/show"
-
-MESSAGE_DELETE_ITEM = "Select an item to delete"
-
-MESSAGE_EMPTY_LIST = "There is nothing on your todo list."
-
-MESSAGE_STARTUP = "*Welcome to your personal To Do list.*\n" \
-                  + "- Send any text to me and I'll store it as an item.\n"\
-                  + "- Send /done to remove items \n" + "- Send /show to show all items"
-
-TOKEN = "487892536:AAETCkb0f8Druow7YzMV_lo9WESiWUUNAiU"
-
-URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+TIMEOUT = 3600 * 4
 
 db = DBHelper()
-db.setup()
+
+# App specific constants
+WATERING_CAN_ID = 'div.f-kettle-body'
+
+DOWNLOAD_IMG_ID = 'div.download-img'
+
+LIMIT = 5
+
+CONFUSED_RESPONSE = "I am confused 😕"
+
+SUCCESS_RESPONSE = "Successfully watered your plant today 🌱"
+
+FAIL_RESPONSE = "I was not able to water your plant [[{}]] 😓 Please try again"
+
+ERROR_RESPONSE = "Oops something went wrong... Please try again"
 
 
-# downloads the content from a URL and returns a string
+def init():
+    with open('config.json') as config_file:
+        config = json.load(config_file)
+    global TELEGRAM_API_URL, CHROME_DRIVER_PATH
+    TELEGRAM_API_URL = TELEGRAM_API_URL.format(config['token'])
+    CHROME_DRIVER_PATH = ChromeDriverManager().install()
+    db.setup()
+
+
 def get_url(url):
+    """
+    Downloads the content from a URL and returns a string
+    :param url: A URL string
+    :return: A repsonse string
+    """
     response = requests.get(url)
     content = response.content.decode("utf8")
     return content
 
 
-# gets the string response and parses it into a Python dictionary
 def get_json_from_url(url):
+    """
+    Gets the string response and parses it into a Python dictionary
+    :param url: A URL string
+    :return: A Python dictionary containing the response
+    """
     content = get_url(url)
     js = json.loads(content)
     return js
 
 
 def get_updates(offset=None):
-    url = URL + "getUpdates?timeout=100"
+    """
+    Retrieves a list of "updates" (messages sent to the bot)
+    :param offset:
+    :return:
+    """
+    url = TELEGRAM_API_URL + f"getUpdates?timeout={TIMEOUT}"
     if offset:
         url += "&offset={}".format(offset)
-    js = get_json_from_url(url)
-    return js
+    resp = get_json_from_url(url)
+    return resp
 
 
 def get_last_update_id(updates):
@@ -62,80 +90,79 @@ def get_last_update_id(updates):
 
 
 def get_last_chat_id_and_text(updates):
+    """
+    Get the chat ID and the message text of the most recent message sent to the bot
+    :param updates:
+    :return:
+    """
     num_updates = len(updates["result"])
     last_update = num_updates - 1
     text = updates["result"][last_update]["message"]["text"]
     chat_id = updates["result"][last_update]["message"]["chat"]["id"]
-    return (text, chat_id)
+    return text, chat_id
 
 
 def send_message(text, chat_id, reply_markup=None):
-    text = urllib.parse.quote_plus(text)
-    url = URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
+    text = urllib.parse.quote_plus(str(text))
+    url = TELEGRAM_API_URL + "sendMessage?text={}&chat_id={}&parse_mode=Markdown".format(text, chat_id)
     if reply_markup:
         url += "&reply_markup={}".format(reply_markup)
     get_url(url)
 
 
+def water_plant(url):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    count = 0
+    while count < LIMIT:
+        browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
+        browser.get(url)
+        time.sleep(3)
+        try:
+            watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
+            watering_can.click()
+            time.sleep(6)
+            # To check if watering was successful, will throw NoSuchElementException is not found
+            browser.find_element_by_css_selector(DOWNLOAD_IMG_ID)
+            count += 1
+            browser.quit()
+        except NoSuchElementException as err:
+            db.add_log(str(datetime.now()), err.msg)
+            return False, count
+    return True, count
+
+
+def send_latest_log(chat_id):
+    latest_log = db.get_latest_log()
+    send_message(latest_log, chat_id)
+
+
+def parse_message(text):
+    start_idx = text.find('http')
+    url = text[start_idx:len(text)]
+    return url
+
+
 def handle_updates(updates):
     for update in updates["result"]:
-        chat = update["message"]["chat"]["id"]
-        try:
-            text = update["message"]["text"]
-            items = db.get_items()
-            process_text(chat, text, items)
-        # if user sends any kind of media instead of text
-        except KeyError:
-            send_message("Media is saved.", chat)
-
-
-def process_text(chat, text, items):
-    if text == DONE_COMMAND:
-        show_items_to_delete(chat, items)
-    elif text == START_COMMAND:
-        send_message(MESSAGE_STARTUP, chat)
-    elif text == SHOW_COMMAND:
-        show_full_list(chat)
-    elif text.startswith(COMMAND_CHARACTER):
-        pass
-    elif text in items:
-        db.delete_item(text)
-        items = db.get_items()
-        show_items_to_delete(chat, items)
-    else:
-        db.add_item(text)
-        show_full_list(chat)
-
-
-def show_full_list(chat):
-    items = db.get_items()
-    if not items:
-        send_message(MESSAGE_EMPTY_LIST, chat)
-    else:
-        message = LIST_HEADER + "\n".join(items)
-        send_message(message, chat)
-
-
-def show_items_to_delete(chat, items):
-    if items:
-        keyboard = build_keyboard(items)
-        send_message(MESSAGE_DELETE_ITEM, chat, keyboard)
-    else:
-        send_message(MESSAGE_EMPTY_LIST, chat, remove_keyboard())
-
-
-def build_keyboard(items):
-    keyboard = [[item] for item in items]
-    reply_markup = {"keyboard": keyboard, "one_time_keyboard": True}
-    return json.dumps(reply_markup)
-
-
-def remove_keyboard():
-    reply_markup = {"remove_keyboard": True}
-    return json.dumps(reply_markup)
+        chat_id = update["message"]["chat"]["id"]
+        text = update["message"]["text"]
+        if 'html' in text:
+            url = parse_message(text)
+            try:
+                has_watered, count = water_plant(url)
+                reply = SUCCESS_RESPONSE if has_watered else FAIL_RESPONSE.format(count + 1)
+                send_message(reply, chat_id)
+            except KeyError:
+                send_message(ERROR_RESPONSE, chat_id)
+        elif text == SHOW_LOG_COMMAND:
+            send_latest_log(chat_id)
+        else:
+            send_message(CONFUSED_RESPONSE, chat_id)
 
 
 def main():
+    init()
     last_update_id = None
     while True:
         updates = get_updates(last_update_id)
