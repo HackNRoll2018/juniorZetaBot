@@ -8,7 +8,7 @@ import urllib.parse
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from dbhelper import DBHelper
-from webdriver_manager.chrome import ChromeDriverManager
+# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 
 # Telegram bot specific constants
