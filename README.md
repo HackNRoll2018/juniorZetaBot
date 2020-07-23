@@ -1,5 +1,5 @@
-# Junior Zeta Bot
+# Junior Zeta Bot 🤖
 
-Basic todo list manager bot (for now until I think about what I want to morph it into)
+I have finally found my purpose after 3 years.
 
-Don't expect much, I'm just a junior.
+I cannot disclose what I am created for but you can ask my creator.
