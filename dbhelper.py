@@ -1,32 +1,34 @@
+import json
 import sqlite3
+
+DELIMITER = ' | '
 
 
 class DBHelper:
-    def __init__(self, dbname="todo.sqlite"):
-        self.dbname = dbname
-        self.conn = sqlite3.connect(dbname)
+    def __init__(self):
+        with open('config.json') as config_file:
+            config = json.load(config_file)
+        self.dbname = config['db']
+        self.conn = sqlite3.connect(self.dbname)
+        self.table = config['db_table']
 
     def setup(self):
-        tablestmt = "CREATE TABLE IF NOT EXISTS items (description text)"    #create table
-        itemidx = "CREATE INDEX IF NOT EXISTS itemIndex ON items (description ASC)"
-        ownidx = "CREATE INDEX IF NOT EXISTS ownIndex ON items (owner ASC)"
-        self.conn.execute(tablestmt)
-        self.conn.execute(itemidx)
+        statement = f"CREATE TABLE IF NOT EXISTS {self.table} (logID INTEGER PRIMARY KEY, timestamp text, description text)"
+        self.conn.execute(statement)
         self.conn.commit()
 
-    #takes the text for the item and inserts it into our database table.
-    def add_item(self, item_text):
-        stmt = "INSERT INTO items (description) VALUES (?)"
-        args = (item_text, )
-        self.conn.execute(stmt, args)
+    def add_log(self, timestamp, description):
+        statement = f"INSERT INTO {self.table} (timestamp, description) VALUES (?, ?)"
+        args = (timestamp, description,)
+        self.conn.execute(statement, args)
         self.conn.commit()
 
-    def delete_item(self, item_text):
-        stmt = "DELETE FROM items WHERE description = (?)"
-        args = (item_text, )
-        self.conn.execute(stmt, args)
+    def delete_log(self, timestamp):
+        statement = f"DELETE FROM {self.table} WHERE timestamp = (?)"
+        args = (timestamp,)
+        self.conn.execute(statement, args)
         self.conn.commit()
 
-    def get_items(self):
-        stmt = "SELECT description FROM items"
-        return [x[0] for x in self.conn.execute(stmt)]
+    def get_latest_log(self):
+        statement = f"SELECT timestamp, description FROM {self.table} WHERE logID = (SELECT MAX(logID) FROM {self.table})"
+        return [DELIMITER.join(x) for x in self.conn.execute(statement)]
