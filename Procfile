@@ -1,1 +1,1 @@
-web: python junior_zeta_bot.py
+worker: python junior_zeta_bot.py
