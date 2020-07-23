@@ -6,6 +6,7 @@ import urllib.parse
 
 import requests
 from selenium import webdriver
+from selenium.common.exceptions import InvalidArgumentException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -141,17 +142,27 @@ def parse_message(text):
     return url
 
 
+def validate_url(url):
+    result = urllib.parse.urlparse(url)
+    if result.scheme != 'http' and not result.netloc:
+        return False
+    return True
+
+
 def handle_updates(updates):
     for update in updates["result"]:
         chat_id = update["message"]["chat"]["id"]
         text = update["message"]["text"]
         if 'html' in text:
             url = parse_message(text)
+            if not validate_url(url):
+                send_message(CONFUSED_RESPONSE, chat_id)
+                return
             try:
                 has_watered, count = water_plant(url)
                 reply = SUCCESS_RESPONSE if has_watered else FAIL_RESPONSE.format(count + 1)
                 send_message(reply, chat_id)
-            except KeyError:
+            except Exception:
                 send_message(ERROR_RESPONSE, chat_id)
         elif text == SHOW_LOG_COMMAND:
             send_latest_log(chat_id)
