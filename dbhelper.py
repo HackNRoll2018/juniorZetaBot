@@ -1,7 +1,12 @@
 import json
+import re
 import sqlite3
 
 DELIMITER = ' | '
+
+
+def remove_newline(string):
+    return re.sub('\r?\n', '', string)
 
 
 class DBHelper:
@@ -19,7 +24,7 @@ class DBHelper:
 
     def add_log(self, timestamp, description):
         statement = f"""INSERT INTO {self.table} (timestamp, description) VALUES (?, ?)"""
-        args = (str(timestamp), str(description),)
+        args = (str(timestamp), remove_newline(str(description)),)
         self.conn.execute(statement, args)
         self.conn.commit()
 
