@@ -46,7 +46,7 @@ LIMIT = 5
 def init():
     global TELEGRAM_API_URL, CHROME_DRIVER_PATH
     CHROME_DRIVER_PATH = ChromeDriverManager().install()
-    TELEGRAM_API_URL = TELEGRAM_API_URL.format(os.environ['TOKEN'])
+    TELEGRAM_API_URL = TELEGRAM_API_URL.format(os.environ.get('TOKEN'))
 
     db.setup()
 
