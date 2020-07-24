@@ -128,7 +128,7 @@ def water_plant(url):
         if os.environ['ENV'] == DEV:
             browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
         else:
-            browser = webdriver.Chrome(executable_path=os.environ['CHROME_DRIVER_PATH'], options=chrome_options)
+            browser = webdriver.Chrome(options=chrome_options)
         browser.get(url)
         present = WebDriverWait(browser, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
         if not present:
