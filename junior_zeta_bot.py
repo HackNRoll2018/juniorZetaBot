@@ -45,13 +45,11 @@ LIMIT = 5
 
 
 def init():
-    with open('config.json') as config_file:
-        config = json.load(config_file)
     global TELEGRAM_API_URL
     if os.environ['ENV'] == DEV:
         global CHROME_DRIVER_PATH
         CHROME_DRIVER_PATH = ChromeDriverManager().install()
-    TELEGRAM_API_URL = TELEGRAM_API_URL.format(config['token'])
+    TELEGRAM_API_URL = TELEGRAM_API_URL.format(os.environ['TOKEN'])
 
     db.setup()
 
