@@ -3,18 +3,17 @@
 import json
 import os
 import time
-from datetime import datetime
 import urllib.parse
+from datetime import datetime
 
 import requests
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 
-from constants import DEV
 from dbhelper import DBHelper
 
 # Telegram bot specific constants
@@ -45,10 +44,8 @@ LIMIT = 5
 
 
 def init():
-    global TELEGRAM_API_URL
-    if os.environ['ENV'] == DEV:
-        global CHROME_DRIVER_PATH
-        CHROME_DRIVER_PATH = ChromeDriverManager().install()
+    global TELEGRAM_API_URL, CHROME_DRIVER_PATH
+    CHROME_DRIVER_PATH = ChromeDriverManager().install()
     TELEGRAM_API_URL = TELEGRAM_API_URL.format(os.environ['TOKEN'])
 
     db.setup()
@@ -124,18 +121,15 @@ def water_plant(url):
     chrome_options.add_argument('--disable-dev-shm-usage')
     count = 0
     while count < LIMIT:
-        if os.environ['ENV'] == DEV:
-            browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
-        else:
-            browser = webdriver.Chrome(options=chrome_options)
+        browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
         browser.get(url)
-        present = WebDriverWait(browser, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
+        present = WebDriverWait(browser, 5).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
         if not present:
             return False, count
         watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
         watering_can.click()
         # To check if watering was successful
-        present = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, DOWNLOAD_IMG_ID)))
+        present = WebDriverWait(browser, 10).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, DOWNLOAD_IMG_ID)))
         if not present:
             return False, count
         count += 1

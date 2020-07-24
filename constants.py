@@ -1,2 +1,0 @@
-DEV = 'dev'
-PROD = 'prod'
