@@ -1,21 +1,26 @@
 # created using: https://www.codementor.io/garethdwyer/building-a-telegram-bot-using-python-part-1-goi5fncay
 
 import json
+import os
 import time
 from datetime import datetime
 import urllib.parse
 
 import requests
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from constants import DEV
 from dbhelper import DBHelper
 
 # Telegram bot specific constants
 SHOW_LOG_COMMAND = "/log"
+
+CHROME_DRIVER_PATH = None
 
 TELEGRAM_API_URL = "https://api.telegram.org/bot{}/"
 
@@ -43,7 +48,11 @@ def init():
     with open('config.json') as config_file:
         config = json.load(config_file)
     global TELEGRAM_API_URL
+    if os.environ['ENV'] == DEV:
+        global CHROME_DRIVER_PATH
+        CHROME_DRIVER_PATH = ChromeDriverManager().install()
     TELEGRAM_API_URL = TELEGRAM_API_URL.format(config['token'])
+
     db.setup()
 
 
@@ -115,7 +124,10 @@ def water_plant(url):
     chrome_options.add_argument("--headless")
     count = 0
     while count < LIMIT:
-        browser = webdriver.Chrome(options=chrome_options)
+        if os.environ['ENV'] == DEV:
+            browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
+        else:
+            browser = webdriver.Chrome(options=chrome_options)
         browser.get(url)
         present = WebDriverWait(browser, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
         if not present:
@@ -163,7 +175,7 @@ def handle_updates(updates):
                 reply = SUCCESS_RESPONSE if has_watered else FAIL_RESPONSE.format(count + 1)
                 send_message(reply, chat_id)
             except Exception as err:
-                db.add_log(datetime.now(), str(err))
+                db.add_log(datetime.now(), err)
                 send_message(ERROR_RESPONSE, chat_id)
         elif text == SHOW_LOG_COMMAND:
             send_latest_log(chat_id)
