@@ -8,11 +8,9 @@ from datetime import datetime
 
 import requests
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 
 from dbhelper import DBHelper
 import logging
@@ -29,6 +27,8 @@ TIMEOUT = 3600 * 4
 db = DBHelper()
 
 # App specific constants
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
+
 WATERING_CAN_ID = 'div.f-kettle-body'
 
 DOWNLOAD_IMG_ID = 'div.download-img'
@@ -47,10 +47,8 @@ logger = logging.getLogger(__name__)
 
 
 def init():
-    global TELEGRAM_API_URL, CHROME_DRIVER_PATH
-    CHROME_DRIVER_PATH = ChromeDriverManager().install()
+    global TELEGRAM_API_URL
     TELEGRAM_API_URL = TELEGRAM_API_URL.format(os.environ.get('TOKEN'))
-
     db.setup()
 
 
@@ -78,9 +76,7 @@ def get_json_from_url(url):
 
 def get_updates(offset=None):
     """
-    Retrieves a list of "updates" (messages sent to the bot)
-    :param offset:
-    :return:
+    Retrieves a list of "updates" (messages sent to the bot) with IDs not smaller than offset
     """
     url = TELEGRAM_API_URL + f"getUpdates?timeout={TIMEOUT}"
     if offset:
@@ -99,8 +95,6 @@ def get_last_update_id(updates):
 def get_last_chat_id_and_text(updates):
     """
     Get the chat ID and the message text of the most recent message sent to the bot
-    :param updates:
-    :return:
     """
     num_updates = len(updates["result"])
     last_update = num_updates - 1
@@ -118,25 +112,31 @@ def send_message(text, chat_id, reply_markup=None):
 
 
 def water_plant(url):
-    chrome_options = Options()
+    chrome_options = webdriver.ChromeOptions()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
+    chrome_options.add_argument(f"user-agent={USER_AGENT}")
     count = 0
     while count < LIMIT:
-        browser = webdriver.Chrome(executable_path=CHROME_DRIVER_PATH, options=chrome_options)
+        browser = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
         browser.get(url)
-        present = WebDriverWait(browser, 5).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
-        if not present:
-            return False, count
-        watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
-        watering_can.click()
-        # To check if watering was successful
-        present = WebDriverWait(browser, 10).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, DOWNLOAD_IMG_ID)))
-        if not present:
-            return False, count
-        count += 1
-        browser.quit()
+        try:
+            present = WebDriverWait(browser, 10).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, WATERING_CAN_ID)))
+            if not present:
+                return False, count
+            watering_can = browser.find_element_by_css_selector(WATERING_CAN_ID)
+            watering_can.click()
+            # To check if watering was successful
+            present = WebDriverWait(browser, 15).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, DOWNLOAD_IMG_ID)))
+            if not present:
+                return False, count
+            count += 1
+            browser.quit()
+        except Exception as err:
+            logger.error(err)
+            return False, -1
     return True, count
 
 
