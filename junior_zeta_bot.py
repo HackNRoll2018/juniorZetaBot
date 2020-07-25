@@ -15,6 +15,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from dbhelper import DBHelper
+import logging
 
 # Telegram bot specific constants
 SHOW_LOG_COMMAND = "/log"
@@ -41,6 +42,8 @@ FAIL_RESPONSE = "I was not able to water your plant [[{}]] 😓 Please try again
 ERROR_RESPONSE = "Oops something went wrong... Please try again"
 
 LIMIT = 5
+
+logger = logging.getLogger(__name__)
 
 
 def init():
@@ -170,6 +173,7 @@ def handle_updates(updates):
                 send_message(reply, chat_id)
             except Exception as err:
                 db.add_log(datetime.now(), err)
+                logger.error(err)
                 send_message(ERROR_RESPONSE, chat_id)
         elif text == SHOW_LOG_COMMAND:
             send_latest_log(chat_id)
